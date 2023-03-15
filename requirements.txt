@@ -1,0 +1,11 @@
+opencv-python==4.1.2.30
+torchvision==0.6.0
+opencv-contrib-python==4.1.2.30
+PyOpenGL==3.1.5
+PyOpenGL-accelerate==3.1.5
+pypng==0.0.21
+cython
+cyglfw3
+pyassimp==3.3
+imgaug
+progressbar
