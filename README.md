@@ -2,7 +2,7 @@
 This is the official PyTorch Implementation of **IndusGrasp: A Novel Robotic Grasp Detection Method Using Synthetic
 Data for Disordered Industrial Scenarios**
 
-##The pipeline:
+## The pipeline:
 
 <img src="image/all.png" width="500" height="500"/><br/>
 
