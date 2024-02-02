@@ -19,7 +19,7 @@ K = np.array(  [[621.399658203125, 0, 313.72052001953125],
               [0,621.3997802734375, 239.97579956054688],
               [0, 0, 1]])
 IM_W, IM_H = 640, 480
-ply_model_paths = [str('/home/sunh/6D_ws/MPGrasp/work_space/help_code/8/obj_8.ply')]
+ply_model_paths = [str('./work_space/mesh/8/obj_8.ply')]
 max_rel_offset = 0.2  # used change the abs bbox
 # ##############################################   config：end  ############################################
 #
@@ -143,7 +143,7 @@ for i_t in range(len(t_all)):
         print('R all is saved!:  {} '.format(idx))
 
 
-np.save('/home/sunh/6D_ws/MPGrasp/work_space/help_code/8/RT_4grasp.npy', RT)
+np.save('./work_space/mesh/8/RT_4grasp.npy', RT)
 
 
 

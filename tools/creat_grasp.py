@@ -23,6 +23,7 @@ K = np.array(  [[621.399658203125, 0, 313.72052001953125],
               [0, 0, 1]])
 IM_W, IM_H = 640, 480
 ply_model_paths = [str('./work_space/mesh/0/obj_0.ply')]
+# ply_model_paths = [str('/media/sunh/Samsung_T5/6D_grasp/robio_data/_CAD_models/Zigzag.ply')]
 max_rel_offset = 0.2  # used change the abs bbox
 # ##############################################   OPENGL 配置  ############################################
 #
@@ -144,11 +145,13 @@ for i_t in range(len(t_all)):
      
         # 保存
         textured_fps_pth = os.path.join('./work_space/mesh/0/grasp_path_point.txt')
+        # textured_fps_pth = os.path.join('/media/sunh/Samsung_T5/6D_grasp/robio_data/_CAD_models/Zigzag/grasp_path_point.txt')
         with open(textured_fps_pth, 'w') as of:
             for p3d in kp_xyz:
                 print(p3d[0], p3d[1], p3d[2], file=of)
 
         textured_fps_pth = os.path.join('./work_space/mesh/0/obj_color_center.txt')
+        # textured_fps_pth = os.path.join('/media/sunh/Samsung_T5/6D_grasp/robio_data/_CAD_models/Zigzag/obj_color_center.txt')
         with open(textured_fps_pth, 'w') as of:
             for p3d in kp_xyz_c:
                 print(p3d[0], p3d[1], p3d[2], file=of)

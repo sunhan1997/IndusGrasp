@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.5.1-0-g916b5db  Build Version: 1.5.7152.31018
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="宝塔接头 3分14.SLDPRT">
+  <link
+    name="宝塔接头 3分14.SLDPRT">
+    <inertial>
+      <origin
+        xyz="-8.0733E-19 -9.4306E-05 -1.46992561365982E-18"
+        rpy="0 0 0" />
+      <mass
+        value="0.024119" />
+      <inertia
+        ixx="3.0961E-06"
+        ixy="-7.1213E-22"
+        ixz="1.0986E-22"
+        iyy="1.5513E-06"
+        iyz="4.3536859476924E-22"
+        izz="3.0961E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://宝塔接头 3分14.SLDPRT/meshes/宝塔接头 3分14.SLDPRT.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.64706 0.51765 0 1" />
+        <texture
+          filename="package://宝塔接头 3分14.SLDPRT/textures/" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://宝塔接头 3分14.SLDPRT/meshes/宝塔接头 3分14.SLDPRT.STL" />
+      </geometry>
+    </collision>
+  </link>
+</robot>
