@@ -32,7 +32,7 @@ pip install  -r requments.txt`
 
 - Using the `tools/creat_grasp.py` to create grasp representation with your own 3D mesh(xx.ply)
 
-- Using the `dataset.py` to create your dataset
+- Using the `dataset_generate.py` to create your dataset
 
 ## Train the IndusGrasp
 `python train.py`
