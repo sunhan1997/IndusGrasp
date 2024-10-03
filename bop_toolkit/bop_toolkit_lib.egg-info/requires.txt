@@ -1,0 +1,5 @@
+pytz
+vispy>=0.6.5
+PyOpenGL==3.1.0
+pypng
+cython

@@ -222,7 +222,7 @@ class ResNet(nn.Module):
         self.up3_pa = up(128, 64)
         self.up4_pa = up(64, 64, add_shortcut=False)
 
-        self.huber_loss = torch.nn.HuberLoss(reduction='mean')
+        # self.huber_loss = torch.nn.HuberLoss(reduction='mean')
 
         # mixstyle
         self.mixstyle = None
@@ -252,8 +252,8 @@ class ResNet(nn.Module):
 
         # 优化器
         parameters_to_train = list(filter(lambda p: p.requires_grad, self.parameters()))
-        self.optimizer = optim.Adam(parameters_to_train, weight_decay=0.00004, lr=0.00005)
-
+        self.optimizer = optim.Adam(parameters_to_train, weight_decay=0.00004, lr=0.0001)
+        self.scheduler = MultiStepLR(self.optimizer, milestones=[50,100,150,200,250,300,400,500], gamma=0.75)
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -305,6 +305,8 @@ class ResNet(nn.Module):
         self.pre_pose = pose_map ## 抓取关键点
         self.pre_path = path_map ## 抓取关键点
 
+        return pose_map, path_map
+
 
 
     def optimize(self, rgb, pose, path ):
@@ -314,10 +316,10 @@ class ResNet(nn.Module):
         self.zero_grad()
 
 
-        self.loss_pose = self.huber_loss(self.pre_pose, pose)
-        self.loss_path = self.huber_loss(self.pre_path, path)
+        self.loss_pose = F.smooth_l1_loss(self.pre_pose, pose) # F.smooth_l1_loss
+        self.loss_path = F.smooth_l1_loss(self.pre_path, path)
 
-        self.loss =   self.loss_pose   + self.loss_path *3
+        self.loss =   self.loss_path   + self.loss_pose *3
         self.loss.backward()
         self.optimizer.step()
         return self.loss_pose, self.loss_path
@@ -365,12 +367,12 @@ def resnet100(pretrained=False, **kwargs):
     return model
 
 
-if __name__ == '__main__':
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-    model = resnet18(False)
-    x = torch.randn((2, 6, 128, 128))
-    model.to(device)
-    x = x.to(device)
-    x = model(x)
-    pass
+# if __name__ == '__main__':
+#     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+#
+#     model = resnet18(False)
+#     x = torch.randn((2, 6, 128, 128))
+#     model.to(device)
+#     x = x.to(device)
+#     x = model(x)
+#     pass

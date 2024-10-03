@@ -5,7 +5,7 @@ Author: sunhan
 import numpy as np
 import cv2
 import math
-from lib.meshrenderer import meshrenderer_phong
+from bop_toolkit_lib import renderer
 from utils import ImgPcldUtils
 import os
 
@@ -21,13 +21,24 @@ render_far = 10000 # unit: should be mm
 K = np.array(  [[621.399658203125, 0, 313.72052001953125],
               [0,621.3997802734375, 239.97579956054688],
               [0, 0, 1]])
+fx, fy, cx, cy = K[0][0], K[1][1], K[0][2], K[1][2]
 IM_W, IM_H = 640, 480
-ply_model_paths = [str('./work_space/mesh/0/obj_0.ply')]
-# ply_model_paths = [str('/media/sunh/Samsung_T5/6D_grasp/robio_data/_CAD_models/Zigzag.ply')]
-max_rel_offset = 0.2  # used change the abs bbox
-# ##############################################   OPENGL 配置  ############################################
-#
-Renderer = meshrenderer_phong.Renderer(ply_model_paths,samples=1,vertex_scale=float(1)) # float(1) for some models
+CAD_MODE_PATH = '/home/sunh/6D_grasp/IndusGrasp2/work_space/mesh/1/obj_1.ply'
+obj_id = 0
+renderer_type = "vispy"
+ambient_weight = 0.1  # Weight of ambient light [0, 1]
+shading = "phong"  # 'flat', 'phong'
+# Create the rgb renderer.
+ren_rgb = renderer.create_renderer(
+    IM_W, IM_H, renderer_type, mode="rgb", shading=shading
+)
+ren_rgb.set_light_ambient_weight(ambient_weight)
+ren_rgb.add_object(obj_id, CAD_MODE_PATH)
+# Create the depth renderer.
+(width_depth,height_depth,) = ( IM_W, IM_H,)
+ren_depth = renderer.create_renderer(width_depth, height_depth, renderer_type, mode="depth")
+ren_depth.add_object(obj_id, CAD_MODE_PATH)
+
 
 # 计算bbox
 def calc_2d_bbox(xs, ys, im_size):
@@ -70,17 +81,12 @@ for i_t in range(len(t_all)):
         t = t_all[i_t] #+ np.array( [x,y,0] )
   
         # 开始渲染
-        bgr, depth = Renderer.render(
-            obj_id=0,
-            W=IM_W,
-            H=IM_H,
-            K=K.copy(),
-            R=R,
-            t=t,
-            near=render_near,
-            far=render_far,
-            random_light=random_light
-        )
+        bgr = ren_rgb.render_object(
+            obj_id, R, t, fx, fy, cx, cy)["rgb"]
+        depth = ren_depth.render_object(
+            obj_id, R, t, fx, fy, cx, cy)["depth"]
+
+
         bgr = bgr/1.2
         mask = (depth > 1e-8).astype('uint8')
         show_msk = (mask / mask.max() * 255).astype("uint8")
@@ -144,14 +150,12 @@ for i_t in range(len(t_all)):
 
      
         # 保存
-        textured_fps_pth = os.path.join('./work_space/mesh/0/grasp_path_point.txt')
-        # textured_fps_pth = os.path.join('/media/sunh/Samsung_T5/6D_grasp/robio_data/_CAD_models/Zigzag/grasp_path_point.txt')
+        textured_fps_pth = os.path.join('/home/sunh/6D_grasp/IndusGrasp2/work_space/mesh/1/grasp_path_point.txt')
         with open(textured_fps_pth, 'w') as of:
             for p3d in kp_xyz:
                 print(p3d[0], p3d[1], p3d[2], file=of)
 
-        textured_fps_pth = os.path.join('./work_space/mesh/0/obj_color_center.txt')
-        # textured_fps_pth = os.path.join('/media/sunh/Samsung_T5/6D_grasp/robio_data/_CAD_models/Zigzag/obj_color_center.txt')
+        textured_fps_pth = os.path.join('/home/sunh/6D_grasp/IndusGrasp2/work_space/mesh/1/obj_color_center.txt')
         with open(textured_fps_pth, 'w') as of:
             for p3d in kp_xyz_c:
                 print(p3d[0], p3d[1], p3d[2], file=of)

@@ -7,8 +7,9 @@ import numpy as np
 import pybullet_data
 from PIL import Image
 from scipy.spatial.transform import Rotation as R
-from lib.meshrenderer import meshrenderer_phong
 import random
+from bop_toolkit_lib import renderer
+
 
 
 ## 计算图像中物体包围框
@@ -80,32 +81,43 @@ def reset():
     # p.configureDebugVisualizer()
     p.setGravity(0, 0, -9.8)
     ## 读取物料框和地板的urdf文件到pybullet
-    planeId = p.loadURDF("./mesh/plane.urdf",
-                         basePosition=[0, 0, 0])
-    trayUid = p.loadURDF("./mesh/tray/sunhan.urdf",
-                         basePosition=[0, 0, 0])
+    planeId = p.loadURDF("/home/sunh/miniconda3/envs/grasp/lib/python3.7/site-packages/pybullet_data/plane.urdf")
+    trayUid = p.loadURDF(
+        "./tools/pybullet_dataset/mesh/tray/sunhan2.urdf",
+        basePosition=[0, 0, 0])
 
 
-###############################################   OPENGL 配置  ############################################
+###############################################   pyrender 配置  ############################################
 random_light = False # 随机灯光
 render_near = 0.1   # 渲染最近距离，单位是毫米
 render_far = 10000 # 渲染最与远距离，单位是毫米
 K = np.array(  [[621.399658203125, 0, 313.72052001953125],
               [0, 621.3997802734375, 239.97579956054688],
               [0, 0, 1]]) ## 相机内参
+fx, fy, cx, cy = K[0][0], K[1][1], K[0][2], K[1][2]
 IM_W, IM_H = 640, 480  # 渲染的图像大小
 # 渲染零件的ply模型（可通过solidworks获得）
-ply_model_paths = [str('/home/sunh/github/IndusGrasp/work_space/mesh/0/obj_0.ply')]
-# 渲染器
-Renderer = meshrenderer_phong.Renderer(ply_model_paths,samples=1,vertex_scale=float(1)) # float(1) for some models
+CAD_MODE_PATH = './work_space/mesh/1/obj_1.ply'
 
+# 渲染器
+obj_id = 0
+renderer_type = "vispy"
+ambient_weight = 0.1  # Weight of ambient light [0, 1]
+shading = "phong"  # 'flat', 'phong'
+ren_rgb = renderer.create_renderer(IM_W, IM_H, renderer_type, mode="rgb", shading=shading)
+ren_rgb.set_light_ambient_weight(ambient_weight)
+ren_rgb.add_object(obj_id, CAD_MODE_PATH)
+
+(width_depth,height_depth,) = ( IM_W, IM_H,)
+ren_depth = renderer.create_renderer(width_depth, height_depth, renderer_type, mode="depth")
+ren_depth.add_object(obj_id, CAD_MODE_PATH)
 
 ###############################################   pybullet 配置  ############################################
 physicsClient = p.connect(p.GUI)
 p.setGravity(0, 0, -9.8)  ## 设置重力
 ## 读取物料框和地板的urdf文件到pybullet
-planeId = p.loadURDF("./mesh/plane.urdf",basePosition=[0, 0, 0])
-trayUid=p.loadURDF("./mesh/tray/sunhan.urdf", basePosition=[0, 0, 0])
+planeId = p.loadURDF("/home/sunh/miniconda3/envs/grasp/lib/python3.7/site-packages/pybullet_data/plane.urdf")
+trayUid=p.loadURDF("./tools/pybullet_dataset/mesh/tray/sunhan2.urdf",basePosition=[0,0,0])
 useRealTimeSimulation = 0
 
 ####  get T_camera_world （设置相机在pybullet环境世界的位置）
@@ -129,10 +141,10 @@ T_camera_world2 = np.dot(R_z, transformation2)
 
 RT = []
 boxId_all = []
-obj_number = 35
+obj_number = 20
 
 
-for idx in range(100):
+for idx in range(5):
     if (useRealTimeSimulation):
         p.setGravity(0, 0, -9.8)
         sleep(0.01)  # Time in seconds.
@@ -144,145 +156,70 @@ for idx in range(100):
             ret_x = random.uniform(-0.05, 0.05)
             ret_y = random.uniform(-0.05, 0.05)
             if idx < 300:
-                # omron = p.loadURDF("/home/sunh/6D_ws/MPGrasp/tools/pybullet_dataset/mesh/omron2/urdf/omron1.SLDPRT.urdf",
-                omron = p.loadURDF("./mesh/宝塔接头 3分14.SLDPRT/urdf/宝塔接头 3分14.SLDPRT.STL.urdf",
-                                   [ret_x, ret_y, 0.002 * idx + 0.003 * i + 0.04])  # idx * i * 0.05 + 0.2
+                omron = p.loadURDF("./work_space/mesh/1/obj_01/urdf/obj_01.urdf",
+                                   [ret_x, ret_y, 0.002 * idx + 0.005 * i + 0.1])  # idx * i * 0.05 + 0.2
             else:
-                omron = p.loadURDF("./mesh/宝塔接头 3分14.SLDPRT/urdf/宝塔接头 3分14.SLDPRT.STL.urdf",
+                omron = p.loadURDF("./work_space/mesh/1/obj_01/urdf/obj_01.urdf",
                                    [0, 0, 0.0004 * idx + 0.006 * i + 0.1])  # idx * i * 0.05 + 0.2
             boxId_all.append(omron)
 
         # 仿真步数目，此处2000，该数值越大，仿真时间越久，2000的时候，零件落下并且位姿稳定
         for i in range(2000):
-            # p.configureDebugVisualizer()
             p.stepSimulation()
 
-        # for i in range(obj_number):
-        #     ## 读取每个零件在世界坐标下的位姿，并转换到相机坐标系
-        #     cubePos, cubeOrn = p.getBasePositionAndOrientation(boxId_all[i])
-        #     T_obj_camera = pybullet_pose2gl(cubeOrn, cubePos, T_camera_world)
-        #     T_obj_camera2 = pybullet_pose2gl(cubeOrn, cubePos, T_camera_world2)
-        #     # 开始渲染，（渲染两次是因为有两个相机位置）
-        #     R_render =  T_obj_camera[:3,:3]
-        #     t_render =  T_obj_camera[:3,3]
-        #     bgr1, depth1 = Renderer.render(
-        #         obj_id=0,
-        #         W=IM_W,
-        #         H=IM_H,
-        #         K=K.copy(),
-        #         R=R_render,
-        #         t=t_render,
-        #         near=render_near,
-        #         far=render_far,
-        #         random_light=random_light
-        #     )
-        #
-        #     R_render =  T_obj_camera2[:3,:3]
-        #     t_render =  T_obj_camera2[:3,3]
-        #     bgr2, depth2 = Renderer.render(
-        #         obj_id=0,
-        #         W=IM_W,
-        #         H=IM_H,
-        #         K=K.copy(),
-        #         R=R_render,
-        #         t=t_render,
-        #         near=render_near,
-        #         far=render_far,
-        #         random_light=random_light
-        #     )
-        #
-        #     ## 计算2D包围框，并去除无法出现在渲染视野中的位姿态
-        #     ys1, xs1 = np.nonzero(depth1 > 0)
-        #     try:
-        #         obj_bb1 = calc_2d_bbox(xs1, ys1, (640, 480))
-        #     except ValueError as e:
-        #         print('Object in Rendering not visible. Have you scaled the vertices to mm? 111111111')
-        #     if len(ys1) ==  0  and len(xs1) == 0:
-        #         print('Obj not visible 1')
-        #     else:
-        #         if  0 < obj_bb1[1] < 405:
-        #             RT.append(T_obj_camera)
-        #
-        #     print('obj_bb1: ',obj_bb1)
-        #     mask = (depth1 > 1e-8).astype('uint8')
-        #     show_msk = (mask / mask.max() * 255).astype("uint8")
-        #     cv2.imshow('s',bgr2)
-        #     cv2.waitKey(1)
-        #     ## 计算2D包围框，并去除无法出现在渲染视野中的位姿态
-        #     ys2, xs2 = np.nonzero(depth2 > 0)
-        #     try:
-        #         obj_bb2 = calc_2d_bbox(xs2, ys2, (640, 480))
-        #     except ValueError as e:
-        #         print('Object in Rendering not visible. Have you scaled the vertices to mm? 22222222222')
-        #     if len(ys2) ==  0  and len(xs2) == 0:
-        #         print('Obj not visible 2')
-        #     else:
-        #         if 0 < obj_bb2[1] < 405:
-        #             RT.append(T_obj_camera2)
+        for i in range(obj_number):
+            ## 读取每个零件在世界坐标下的位姿，并转换到相机坐标系
+            cubePos, cubeOrn = p.getBasePositionAndOrientation(boxId_all[i])
+            T_obj_camera = pybullet_pose2gl(cubeOrn, cubePos, T_camera_world)
+            T_obj_camera2 = pybullet_pose2gl(cubeOrn, cubePos, T_camera_world2)
+            # 开始渲染，（渲染两次是因为有两个相机位置）
+            R_render =  T_obj_camera[:3,:3]
+            t_render =  T_obj_camera[:3,3]
+
+            bgr1 = ren_rgb.render_object(
+                obj_id, R_render, t_render, fx, fy, cx, cy)["rgb"]
+            depth1 = ren_depth.render_object(
+                obj_id, R_render, t_render, fx, fy, cx, cy)["depth"]
+
+
+            R_render =  T_obj_camera2[:3,:3]
+            t_render =  T_obj_camera2[:3,3]
+            bgr2 = ren_rgb.render_object(
+                obj_id, R_render, t_render, fx, fy, cx, cy)["rgb"]
+            depth2 = ren_depth.render_object(
+                obj_id, R_render, t_render, fx, fy, cx, cy)["depth"]
+            
+            ## 计算2D包围框，并去除无法出现在渲染视野中的位姿态
+            ys1, xs1 = np.nonzero(depth1 > 0)
+            try:
+                obj_bb1 = calc_2d_bbox(xs1, ys1, (640, 480))
+            except ValueError as e:
+                print('Object in Rendering not visible. Have you scaled the vertices to mm? 111111111')
+            if len(ys1) ==  0  and len(xs1) == 0:
+                print('Obj not visible 1')
+            else:
+                if  0 < obj_bb1[1] < 405:
+                    RT.append(T_obj_camera)
+
+            print('obj_bb1: ',obj_bb1)
+            mask = (depth1 > 1e-8).astype('uint8')
+            show_msk = (mask / mask.max() * 255).astype("uint8")
+            cv2.imshow('s',bgr2)
+            cv2.waitKey(1)
+            ## 计算2D包围框，并去除无法出现在渲染视野中的位姿态
+            ys2, xs2 = np.nonzero(depth2 > 0)
+            try:
+                obj_bb2 = calc_2d_bbox(xs2, ys2, (640, 480))
+            except ValueError as e:
+                print('Object in Rendering not visible. Have you scaled the vertices to mm? 22222222222')
+            if len(ys2) ==  0  and len(xs2) == 0:
+                print('Obj not visible 2')
+            else:
+                if 0 < obj_bb2[1] < 405:
+                    RT.append(T_obj_camera2)
 
         print('>>>>>>>>>>>>>>>>>: {}'.format(idx))
 
 #最终保存
-# np.save('./RT.npy', RT)
-# print('saved')
-
-
-####  get RGB / DEPTH / MASK from pybullet
-# rgb,depth,mask, tran_pix_world = render()
-# cv2.cvtColor(rgb,cv2.COLOR_BGR2RGB)
-# mask[mask <= 1] = 0
-# mask[mask > 0] = 255
-# cv2.imwrite('/home/sunh/6D_ws/AAE_torch/lib/pybullet_dataset/rgb.png',rgb)
-# cv2.imwrite('/home/sunh/6D_ws/AAE_torch/lib/pybullet_dataset/depth.png',depth)
-# cv2.imwrite('/home/sunh/6D_ws/AAE_torch/lib/pybullet_dataset/mask.png',mask)
-
-####  get the pointcloud from sence
-# imgH =480
-# imgW =640
-# for h in range(0, imgH):
-#     for w in range(0, imgW):
-#         x = (2 * w - imgW) / imgW
-#         y = -(2 * h - imgH) / imgH  # be careful！ deepth and its corresponding position
-#         z = 2 * depth[h, w] - 1
-#         pixPos = np.asarray([x, y, z, 1])
-#         print('pixPos: ', pixPos)
-#
-#         position = np.matmul(tran_pix_world, pixPos)
-#         print('position: ', position)
-#         pointCloud[np.int(h / 1), np.int(w / 1), :] = position / position[3]
-# write_pointcloud("fromSideAngle3.ply", pointCloud, imgH, imgW, 1, 1)
-
-
-##  start render
-# R_render =  T_obj_camera[:3,:3]
-# t_render =  T_obj_camera[:3,3]
-# bgr, depth = Renderer.render(
-#     obj_id=0,
-#     W=IM_W,
-#     H=IM_H,
-#     K=K.copy(),
-#     R=R_render,
-#     t=t_render,
-#     near=render_near,
-#     far=render_far,
-#     random_light=random_light
-# )
-# cv2.imshow('bgr',bgr)
-# cv2.imwrite('/home/sunh/6D_ws/AAE_torch/lib/pybullet_dataset/bgr.png',bgr)
-# cv2.waitKey(1)
-
-
-# cubePos1, cubeOrn1 = p.getBasePositionAndOrientation(boxId_1)
-# cubePos2, cubeOrn2 = p.getBasePositionAndOrientation(boxId_2)
-# cubePos3, cubeOrn3 = p.getBasePositionAndOrientation(boxId_3)
-# cubePos4, cubeOrn4 = p.getBasePositionAndOrientation(boxId_4)
-# T_obj_camera0 = pybullet_pose2gl(cubeOrn0, cubePos0, T_camera_world)
-# T_obj_camera1 = pybullet_pose2gl(cubeOrn1, cubePos1, T_camera_world)
-# T_obj_camera2 = pybullet_pose2gl(cubeOrn2, cubePos2, T_camera_world)
-# T_obj_camera3 = pybullet_pose2gl(cubeOrn3, cubePos3, T_camera_world)
-# T_obj_camera4 = pybullet_pose2gl(cubeOrn4, cubePos4, T_camera_world)
-# RT.append(T_obj_camera0)
-# RT.append(T_obj_camera1)
-# RT.append(T_obj_camera2)
-# RT.append(T_obj_camera3)
-# RT.append(T_obj_camera4)
+np.save('./work_space/mesh/0/RT.npy', RT)
+print('saved')

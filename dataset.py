@@ -11,7 +11,7 @@ from torchvision import transforms
 import torch
 import torchvision.transforms.functional as F
 import matplotlib.pyplot as plt
-
+import imgaug.augmenters as iaa
 
 # 直线检测
 def fld(img,test_model=False):
@@ -62,7 +62,7 @@ class Dataset_Train(object):
         C = 3   # resize后图像的通道数
 
         self.numb_bg_imgs = 100    # 背景图像个数
-        self.train_imgs_per_obj = int(300)  # 每个物体渲染图像个数
+        self.train_imgs_per_obj = int(100)  # 每个物体渲染图像个数
         self.shape = (int(H), int(W), int(C)) # 图像shape
 
         # self.obj_id = [1,2,3,4,5,6,7]
@@ -134,6 +134,10 @@ class Dataset_Train(object):
         return Sequential([Sometimes(0.7, CoarseDropout( p=0.4, size_percent=0.01) )])
 
 
+    def add_random_light(self, image):
+        brightness = np.random.randint(-100,100)
+        image_with_light = cv2.add(image, brightness)
+        return image_with_light
 
     ## 把数据放入网络
     def torch_batch(self, index):
@@ -148,50 +152,23 @@ class Dataset_Train(object):
         rand_idcs_bg = rand_idcs_bg.tolist()
         rand_vocs = self.bg_imgs[rand_idcs_bg]
         rand_vocs[masks] = batch_x[masks]
-        batch_x = rand_vocs
-        batch_x = self._aug.augment_images(batch_x)
+        # batch_x = rand_vocs
+        # batch_x = self._aug.augment_images(batch_x)
 
         batch_x = batch_x[0]
+        # batch_x = self.add_random_light(batch_x)
         # 训练数据获得多特征融合图
         batch_fusion = gen_multi_feature_fusion_map(batch_x)
 
-        # ## debug
+        # cv2.imwrite('/media/sunh/HW/孙晗/2/{}.png'.format(index), batch_x)
+        # # ## debug
         # cv2.imshow('batch_x', batch_x)
         # cv2.waitKey()
-        # cv2.imshow('batch_fusion', batch_fusion[:,:,1])
+        # cv2.imshow('batch_fusion', batch_fusion)
         # cv2.waitKey()
-        ############################################
-        # pose = pose[0]
-        # path = path[0]
-        # a = np.zeros((128,128,3))
-        # a[:,:,0][pose==0.5] = 20
-        # a[:,:,1][pose==0.5] = 20
-        # a[:,:,2][pose==0.5] = 0
-        #
-        #
-        # a[:,:,1][pose==5] =  50
-        # a[:,:,2][pose==5] = 50
-        #
-        # a[:,:,0][pose==1] = 128
-        # a[:,:,1][pose==1] = 0
-        # a[:,:,2][pose==1] = 0
-        #
-        #
-        # b = np.zeros((128,128,3))
-        # b[:,:,0][path==0.5] = 20
-        # b[:,:,1][path==0.5] = 20
-        # b[:,:,2][path==0.5] = 0
-        #
-        # b[:,:,1][path==5] =  50
-        # b[:,:,2][path==5] = 50
-        # cv2.imshow('grasp_keypoints', a)
-        # cv2.imshow('grasp_path', b)
-        # cv2.waitKey()
-        ############################################
-
         # plt.imshow(pose[0])
         # # plt.imshow(pose)
-        # plt.title('pose')
+        # # plt.title('pose')
         # plt.colorbar()
         # plt.show()
         # plt.imshow(path[0])
@@ -213,11 +190,11 @@ class Dataset_Test(object):
         C = 3  # resize后图像的通道数
 
         self.numb_bg_imgs = 100  # 背景图像个数
-        self.train_imgs_per_obj = int(300)  # 每个物体渲染图像个数
+        self.train_imgs_per_obj = int(100)  # 每个物体渲染图像个数
         self.shape = (int(H), int(W), int(C))  # 图像shape
 
         # self.obj_id = [1,2,3,4,5,6,7]
-        self.obj_id = [0,2 ]  # 训练物体的ID
+        self.obj_id = [1,]  # 训练物体的ID
         self.imgs_numb_all = self.train_imgs_per_obj * int(len(self.obj_id))  # 所有物体图像总数
 
         self.train_x = np.empty((self.imgs_numb_all,) + self.shape, dtype=np.uint8)  # 保存训练图像
@@ -293,11 +270,11 @@ class Dataset_Test(object):
         path = self.gs_path_with[index]
 
         ## add background
-        # rand_idcs_bg = rand_idcs_bg.tolist()
-        # rand_vocs = self.bg_imgs[rand_idcs_bg]
-        # rand_vocs[masks] = batch_x[masks]
-        # batch_x = rand_vocs
-        # batch_x = self._aug.augment_images(batch_x)
+        rand_idcs_bg = rand_idcs_bg.tolist()
+        rand_vocs = self.bg_imgs[rand_idcs_bg]
+        rand_vocs[masks] = batch_x[masks]
+        batch_x = rand_vocs
+        batch_x = self._aug.augment_images(batch_x)
 
         batch_x = batch_x[0]
         # 训练数据获得多特征融合图

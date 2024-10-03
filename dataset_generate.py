@@ -3,15 +3,15 @@ This dataset.py generate Synthetic Data including train_image and heatmaps.
 """
 import glob
 import random
-from lib.pysixd_stuff import view_sampler
-from lib.aeutils import lazy_property
-from lib.meshrenderer import meshrenderer, meshrenderer_phong
+import utils.view_sampler as view_sampler
+from utils.aeutils import lazy_property
 import configparser
 import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import utils.kps_heatmap as kps_heatmap
+from bop_toolkit_lib import renderer
 
 
 # 直线检测
@@ -49,7 +49,7 @@ class Dataset(object):
         C = 3   # resize后图像的通道数
 
         self.numb_bg_imgs = 100    # 背景图像个数
-        self.train_imgs_per_obj = int(300)  # 每个物体渲染图像个数
+        self.train_imgs_per_obj = int(100)  # 每个物体渲染图像个数
 
         self.shape = (int(H), int(W), int(C)) # 图像shape
         self.dataset_path = dataset_path  # 数据放置路径
@@ -57,8 +57,7 @@ class Dataset(object):
         self.render_dims = (480, 640) # 渲染图像维度
 
         # self.obj_id = [1,2,3,4,5,6,7]
-        # self.obj_id = [0,2,]  # 训练物体的ID
-        self.obj_id = ['Zigzag',]  # 训练物体的ID
+        self.obj_id = [1,]  # 训练物体的ID
         self.imgs_numb_all = self.train_imgs_per_obj * int(len(self.obj_id))  # 所有物体图像总数
 
         self.train_x = np.empty( (self.imgs_numb_all,) + self.shape, dtype=np.uint8 ) # 保存训练图像
@@ -70,6 +69,11 @@ class Dataset(object):
 
 
         self.K = [621.399658203125, 0, 313.72052001953125, 0, 621.3997802734375, 239.97579956054688, 0, 0, 1]    ## 相机内参，影响不大
+        self.renderer_type = "vispy"
+        self.ambient_weight = 0.1  # Weight of ambient light [0, 1]
+        self.shading = "phong"  # 'flat', 'phong'
+
+
 
         cfg_file_path = './work_space/render.cfg'  ## 域随即化配置文件
         args = configparser.ConfigParser()
@@ -98,10 +102,11 @@ class Dataset(object):
             self.gs_path_with = training_data['gs_path_with']
         else: ## 创建训练数据
             intrinsic_matrix = np.array(self.K).reshape(3, 3) # 相机内参
+            self.fx, self.fy, self.cx, self.cy = intrinsic_matrix[0][0], intrinsic_matrix[1][1], intrinsic_matrix[0][2], intrinsic_matrix[1][2]
 
             for idx in range(len(self.obj_id)):
                 obj_id = self.obj_id[idx]
-                ply_model_paths = [str('./work_space/mesh/{}/obj_{}.ply'.format(obj_id,obj_id))] # 读取物体PLY文件
+                ply_model_paths = './work_space/mesh/{}/obj_{}.ply'.format(obj_id,obj_id)# 读取物体PLY文件
                 grasp_file = "./work_space/mesh/{}/grasp_path_point.txt".format(obj_id) # 读取物体抓取路径txt
                 center_file = "./work_space/mesh/{}/obj_color_center.txt".format(obj_id) # 读取物体抓取关键点
                 if obj_id == 8 :
@@ -143,25 +148,25 @@ class Dataset(object):
         clip_near = 0.1
         clip_far = 10000
 
-        render_x = meshrenderer_phong.Renderer( ply_model_paths, 1, self.dataset_path, 1)
+
+        ren_rgb = renderer.create_renderer(self.render_dims[1], self.render_dims[0], self.renderer_type, mode="rgb", shading=self.shading)
+        ren_rgb.set_light_ambient_weight(self.ambient_weight)
+        ren_rgb.add_object(0, ply_model_paths)
+        (width_depth, height_depth,) = (self.render_dims[1], self.render_dims[0],)
+        ren_depth = renderer.create_renderer(width_depth, height_depth, self.renderer_type, mode="depth")
+        ren_depth.add_object(0, ply_model_paths)
+
 
         for idx in range( 0 + obj_idx * self.train_imgs_per_obj, self.train_imgs_per_obj + obj_idx * self.train_imgs_per_obj ):
             RT = self.render_RT_all[idx -  obj_idx * self.train_imgs_per_obj]
             R = RT[:3, :3]
             t = RT[0:3, 3] #- np.array((0,0,200))
 
+            bgr = ren_rgb.render_object(
+                0, R, t, self.fx, self.fy, self.cx, self.cy)["rgb"]
+            depth = ren_depth.render_object(
+                0, R, t, self.fx, self.fy, self.cx, self.cy)["depth"]
 
-            bgr, depth = render_x.render(
-                obj_id=0,
-                W=self.render_dims[1],
-                H=self.render_dims[0],
-                K=K.copy(),
-                R=R,
-                t=t,
-                near=clip_near,
-                far=clip_far,
-                random_light=True
-            )
             rgb_img = bgr.copy()
 
 
